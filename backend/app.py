@@ -19,10 +19,10 @@ from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
 
 from .storage import Store, CLIENTS, ROOT, now, uid, digest, document, public_doc, active_documents, storage_usage, Conflict, workspace_scope
-from .documents import inspect_document, apply_edits, page_image
+from .documents import inspect_document, apply_edits, page_image, spreadsheet_download
 from .assistant import answer_stream, validate_result
 from .providers import catalog
-from . import security, cloud, accounts
+from . import security, cloud, accounts, ocr
 
 store=Store()
 app=FastAPI(title='Folio',docs_url=None,redoc_url=None,openapi_url=None)
@@ -141,11 +141,19 @@ async def invalid(request,exc):return JSONResponse({'detail':str(exc)},status_co
 async def stale(request,exc):return JSONResponse({'detail':str(exc)},status_code=409)
 
 
+class UncachedParse(Exception):
+    def __init__(self,result):self.result=result
+
+
 @lru_cache(maxsize=24)
-def parsed_small(data,name):return inspect_document(data,name)
+def parsed_small(data,name,ocr_mode=None):
+    result=inspect_document(data,name)
+    if result.pop('ocr_retryable',False):raise UncachedParse(result)
+    return result
 
 def parsed(data,name):
-    return parsed_small(data,name) if len(data)<=2*1024*1024 else inspect_document(data,name)
+    try:return parsed_small(data,name,ocr.cache_mode()) if len(data)<=2*1024*1024 else inspect_document(data,name)
+    except UncachedParse as exc:return exc.result
 
 def inspect(doc):return parsed(store.content(doc),doc['name'])
 
@@ -160,8 +168,10 @@ def source_map(state):
             sources[sid]=source;blocks.append(source)
         context.append({'document_id':doc['id'],'name':doc['name'],'folder':doc['folder'],'revision':doc['revision'],'blocks':blocks,'fields':info.get('fields',[]),'warnings':info['warnings']})
         for page in info.get('pages',[]):
-            if page['scan'] and not page['blocks']:
-                images.append({'source_id':doc['id']+f'::page{page["number"]}:image','type':'image/png','data':page_image(store.content(doc),page['number'])})
+            if page['scan']:
+                if len(images)>=20:raise ValueError('Too many scanned pages for one question. Limit this folder to 20 image pages.')
+                label=(f'Scanned page {page["number"]} of {doc["name"]}. Cross-check the OCR text against this image. Cite the exact supplied OCR line IDs for the relevant facts.' if page['blocks'] else None)
+                images.append({'source_id':doc['id']+f'::page{page["number"]}:image','label':label,'type':'image/png','data':page_image(store.content(doc),page['number'])})
         if info['kind']=='image':
             raw=store.content(doc)
             from PIL import Image
@@ -240,14 +250,22 @@ def read_document(client:str,doc_id:str):
     state,_=store.read(client);doc=document(state,doc_id)
     return {**public_doc(doc),**inspect(doc),'history':[{k:v for k,v in h.items() if k!='blob'} for h in doc['history']]}
 @app.get('/api/clients/{client}/documents/{doc_id}/download')
-def download(client:str,doc_id:str,revision:int|None=None):
+def download(client:str,doc_id:str,revision:int|None=None,original:bool=False):
     state,_=store.read(client);doc=document(state,doc_id)
     selected=doc
     if revision is not None and revision!=doc['revision']:
         selected=next((h for h in doc['history'] if h['revision']==revision),None)
         if not selected:raise KeyError('Revision not found')
-    if selected['blob'].startswith('s3:'):return RedirectResponse(cloud.download_url(selected['blob'][3:],doc['name']),status_code=303,headers={'Cache-Control':'no-store'})
-    return Response(store.content(selected),media_type=mimetypes.guess_type(doc['name'])[0] or 'application/octet-stream',headers={'Content-Disposition':"attachment; filename*=UTF-8''"+quote(doc['name'])})
+    if selected['blob'].startswith('s3:') and (doc['ext']!='xlsx' or original):return RedirectResponse(cloud.download_url(selected['blob'][3:],doc['name']),status_code=303,headers={'Cache-Control':'no-store'})
+    raw=store.content(selected)
+    if doc['ext']=='xlsx' and not original:raw=spreadsheet_download(raw)
+    if os.getenv('VERCEL') and cloud.bucket() and len(raw)>4*1024*1024:
+        # Prepared exports may exceed the function response limit. The private
+        # incoming prefix expires automatically, just like unfinished uploads.
+        key=f'incoming/{store.scoped_key(client)}/exports/{uid()}'
+        cloud.client('s3').put_object(Bucket=cloud.bucket(),Key=key,Body=raw,ContentType='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
+        return RedirectResponse(cloud.download_url(key,doc['name']),status_code=303,headers={'Cache-Control':'no-store'})
+    return Response(raw,media_type=mimetypes.guess_type(doc['name'])[0] or 'application/octet-stream',headers={'Content-Disposition':"attachment; filename*=UTF-8''"+quote(doc['name'])})
 @app.get('/api/clients/{client}/documents/{doc_id}/page/{number}')
 def pdf_page(client:str,doc_id:str,number:int,revision:int|None=None):
     state,_=store.read(client);doc=document(state,doc_id);selected=doc

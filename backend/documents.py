@@ -14,10 +14,15 @@ from openpyxl.utils.cell import range_boundaries, coordinate_to_tuple
 from openpyxl.workbook.properties import CalcProperties
 from pypdf import PdfReader, PdfWriter
 import pymupdf
+from . import ocr
 
 
 class FormulaError(Exception):
     pass
+
+
+class ExcelError(str):
+    """Distinguish a calculation failure from formula text such as =\"#REF!\"."""
 
 
 class Calculator:
@@ -29,24 +34,27 @@ class Calculator:
     def cell(self, sheet, coord):
         self.steps += 1
         if self.steps > 100000 or len(self.active) > 80:
-            return '#LIMIT!'
+            return ExcelError('#LIMIT!')
         key = (sheet, coord)
         if key in self.cache:
             return self.cache[key]
         if sheet not in self.wb.sheetnames:
-            return '#REF!'
+            return ExcelError('#REF!')
         if key in self.active:
-            return '#CYCLE!'
-        value = self.wb[sheet][coord].value
+            return ExcelError('#CYCLE!')
+        cell = self.wb[sheet][coord]
+        value = cell.value
         if not isinstance(value, str) or not value.startswith('='):
-            return value
+            return ExcelError(value) if cell.data_type == 'e' else value
         self.active.add(key)
         try:
             result = self.formula(value[1:], sheet)
         except ZeroDivisionError:
-            result = '#DIV/0!'
-        except (FormulaError, ValueError, TypeError, KeyError, SyntaxError, OverflowError, IndexError, RecursionError):
-            result = '#UNSUPPORTED!'
+            result = ExcelError('#DIV/0!')
+        except FormulaError as exc:
+            result = ExcelError(str(exc) or '#UNSUPPORTED!')
+        except (ValueError, TypeError, KeyError, SyntaxError, OverflowError, IndexError, RecursionError):
+            result = ExcelError('#UNSUPPORTED!')
         finally:
             self.active.remove(key)
         self.cache[key] = result
@@ -65,7 +73,7 @@ class Calculator:
             name = m.group(1) or m.group(2) or sheet
             start, end = m.group(3).replace('$',''), m.group(4)
             if name not in self.wb.sheetnames:
-                value = '#REF!'
+                value = ExcelError('#REF!')
             elif end:
                 bounds=range_boundaries(f'{start}:{end.replace(chr(36), "")}')
                 if (bounds[2]-bounds[0]+1)*(bounds[3]-bounds[1]+1)>10000:raise FormulaError()
@@ -83,7 +91,7 @@ class Calculator:
         def flatten(args):
             return [v for a in args for v in (a if isinstance(a,list) else [a])]
         def numeric(v):
-            if isinstance(v,str) and v.startswith('#'):
+            if isinstance(v,ExcelError):
                 raise FormulaError(v)
             if v is None:return 0
             if not isinstance(v,(int,float)) or not math.isfinite(v) or abs(v)>1e100:raise FormulaError()
@@ -108,7 +116,8 @@ class Calculator:
                 if fn=='STR': return strings[args[0]]
                 if fn in ('SUM','MIN','MAX','AVERAGE','COUNT'):
                     values=flatten(args)
-                    if any(isinstance(v,str) and v.startswith('#') for v in values): raise FormulaError()
+                    for value in values:
+                        if isinstance(value,ExcelError):raise FormulaError(value)
                     values=[v for v in values if isinstance(v,(int,float))]
                     if fn=='SUM': return sum(values)
                     if fn=='COUNT': return len(values)
@@ -129,6 +138,7 @@ class Calculator:
         tree=ast.parse(expression,mode='eval')
         if sum(1 for _ in ast.walk(tree))>300:raise FormulaError()
         result=ev(tree.body)
+        if isinstance(result,bool):return result
         if isinstance(result,(int,float)):result=numeric(result)
         elif not isinstance(result,(str,type(None))):raise FormulaError()
         return result
@@ -138,6 +148,16 @@ def word_paragraphs(doc):
     """Body + table paragraphs in document order, each with stable position."""
     from docx.text.paragraph import Paragraph
     return [Paragraph(p,doc._body) for p in doc.element.body.iter('{http://schemas.openxmlformats.org/wordprocessingml/2006/main}p')]
+
+
+def spreadsheet_download(data, workbook=None):
+    from .xlsx_export import cache_formula_results, checked_archive
+    with checked_archive(data):
+        pass
+    workbook = workbook or load_workbook(io.BytesIO(data))
+    if len(workbook.worksheets)>30 or any(ws.max_row>5000 or ws.max_column>100 for ws in workbook.worksheets):
+        raise ValueError('Workbook exceeds the supported 5,000 rows, 100 columns or 30 sheets.')
+    return cache_formula_results(data,workbook,Calculator(workbook),ExcelError)
 
 
 def inspect_document(data, filename):
@@ -171,6 +191,7 @@ def inspect_document(data, filename):
         reader=PdfReader(io.BytesIO(data));result.update(kind='pdf',pages=[],fields=[])
         with pymupdf.open(stream=data,filetype='pdf') as pdf:
             if len(pdf)>100:raise ValueError('PDF exceeds the 100-page reading limit.')
+            scans=0
             for i,page in enumerate(pdf):
                 blocks=[]
                 for j,b in enumerate(page.get_text('blocks')):
@@ -179,20 +200,20 @@ def inspect_document(data, filename):
                         block={'locator':f'page{i+1}:b{j}','text':text,'page':i+1,'rect':[b[0]/page.rect.width,b[1]/page.rect.height,b[2]/page.rect.width,b[3]/page.rect.height]}
                         blocks.append(block);result['blocks'].append(block)
                 scan=not blocks
-                if scan and shutil.which('tesseract'):
+                if scan:
+                    scans+=1
+                    if scans>20:raise ValueError('PDF exceeds the 20 scanned-page reading limit.')
                     try:
-                        import pytesseract
-                        from PIL import Image
                         scale=min(2,2000/max(page.rect.width,page.rect.height))
                         pix=page.get_pixmap(matrix=pymupdf.Matrix(scale,scale))
-                        text=pytesseract.image_to_string(Image.open(io.BytesIO(pix.tobytes('png'))),timeout=15).strip()
-                        if text:
-                            block={'locator':f'page{i+1}:ocr','text':text,'page':i+1,'rect':[0,0,1,1],'ocr':True}
+                        for j,line in enumerate(ocr.detect_lines(pix.tobytes('png'))):
+                            block={'locator':f'page{i+1}:ocr{j}','page':i+1,'ocr':True,'granularity':'line',**line}
                             blocks.append(block);result['blocks'].append(block)
-                    except Exception: pass
+                    except ocr.OCRUnavailable as exc:
+                        if exc.retryable:result['ocr_retryable']=True
                 if scan:
                     result['warnings'].append(f'Page {i+1} is a scan. '+('OCR text may contain errors.' if blocks else 'Visual reading requires Claude; no text was extracted.'))
-                    if not blocks: result['blocks'].append({'locator':f'page{i+1}:image','text':'Image-only page. Read the attached page image; do not guess unreadable details.','page':i+1,'rect':[0,0,1,1]})
+                    if not blocks: result['blocks'].append({'locator':f'page{i+1}:image','text':'Image-only page. Read the attached page image; do not guess unreadable details.','page':i+1,'rect':[0,0,1,1],'granularity':'page'})
                 result['pages'].append({'number':i+1,'width':page.rect.width,'height':page.rect.height,'blocks':blocks,'scan':scan})
         for name,f in (reader.get_fields() or {}).items():
             result['fields'].append({'name':name,'label':str(f.get('/TU',name)),'type':'checkbox' if f.get('/FT')=='/Btn' else 'text','value':str(f.get('/V','')),'options':[str(s) for s in f.get('/_States_',[])]})
@@ -233,6 +254,7 @@ def apply_edits(data, filename, changes):
             wb[sheet][cell]=value
         wb.calculation=CalcProperties(fullCalcOnLoad=True)
         wb.save(output)
+        return spreadsheet_download(output.getvalue(),wb)
     elif ext=='.docx':
         doc=Document(io.BytesIO(data));paras=word_paragraphs(doc)
         for change in changes:

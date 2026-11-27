@@ -30,7 +30,7 @@ def client(service):
         key = (service, role, region)
         if key not in _clients:
             _clients[key] = boto3.client(service, region_name=region,
-                config=Config(signature_version='s3v4' if service=='s3' else 'v4', s3={'addressing_style':'virtual','us_east_1_regional_endpoint':'regional'}, connect_timeout=10, read_timeout=90, retries={'total_max_attempts':3,'mode':'standard'}),
+                config=Config(signature_version='s3v4' if service=='s3' else 'v4', s3={'addressing_style':'virtual','us_east_1_regional_endpoint':'regional'}, connect_timeout=10, read_timeout=20 if service=='textract' else 90, retries={'total_max_attempts':2 if service=='textract' else 3,'mode':'standard'}),
                 **(_credentials[1] if role else {}))
         return _clients[key]
 

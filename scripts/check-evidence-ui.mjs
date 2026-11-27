@@ -49,6 +49,9 @@ try{
  await expect(page.locator('.formula-bar>span')).toHaveText('C10');
  await page.screenshot({path:'test-results/evidence-sheet.png'});
  checks.push('Spreadsheet source auto-opens with correct sheet, selected cell and formula bar; second inline citation switches sheets and highlights');
+ await page.getByRole('button',{name:'History',exact:true}).click();
+ await expect(page.getByRole('link',{name:'Download stored file',exact:true}).first()).toHaveAttribute('href',/revision=1&original=true$/);
+ checks.push('History exposes the exact stored version separately from recalculated spreadsheet downloads');
  const [pdf]=await json(await api.post(base+'/api/clients/northwind/upload',{multipart:{folder:'Inbox',files:{name:'Evidence multipage.pdf',mimeType:'application/pdf',buffer:await readFile('test-results/evidence-multipage.pdf')}}}));uploads.push(pdf);
  let releaseImage;const imageGate=new Promise(resolve=>{releaseImage=resolve});
  await page.route('**/page/2?*',async route=>{await imageGate;await route.continue()});
@@ -59,8 +62,12 @@ try{
  await page.screenshot({path:'test-results/evidence-pdf.png'});
  checks.push('Multi-page PDF auto-opens and scrolls to the cited rectangle even before page image loading completes');
  await start('Scan fixture');await complete();await expect(page.locator('.evidence-highlight')).toHaveCount(1);
- await expect(page.locator('.evidence-banner')).toContainText('Page or image used in the answer');
- checks.push('Image-only scan highlights the whole source and labels its granularity honestly');
+ await highlighted('page1:ocr0');
+ await expect(page.locator('.evidence-banner')).toContainText('HIGHLIGHTED');
+ const scanBox=await page.locator('.pdf-highlight').evaluate(el=>({top:parseFloat(el.style.top),height:parseFloat(el.style.height)}));
+ assert(scanBox.top>34&&scanBox.top<36&&scanBox.height<4);
+ await page.screenshot({path:'test-results/evidence-scan-line.png'});
+ checks.push('Scanned PDF highlights its cited OCR line rather than the whole page');
  const png=await readFile('test-results/evidence-pixel.png');
  const [uploaded]=await json(await api.post(base+'/api/clients/northwind/upload',{multipart:{folder:'Inbox',files:{name:'Evidence pixel.png',mimeType:'image/png',buffer:png}}}));uploads.push(uploaded);
  await start('Image fixture');await complete();await highlighted('image');

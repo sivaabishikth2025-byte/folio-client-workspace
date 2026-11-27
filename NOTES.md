@@ -2,30 +2,32 @@
 
 Received: Thu 26 Nov 2026, 9:31 PM CT.  
 Started: Fri 27 Nov 2026, 01:18 CST.  
-Finished: Fri 27 Nov 2026, 13:54 CST.
+Finished: Fri 27 Nov 2026, 14:31 CST.
 
 ## what works / what doesn't
 
-Chat reads the selected client's folder and opens highlighted sources. All 17 supplied files are preserved. PDF, Word and Excel previews/downloads, reviewed document edits, supplier-form filling, file uploads, chat deletion and file Trash work. Accounts support email verification, recovery and sign-out. Appearance changes, resizable panels, dictation and read-aloud are included.
+Chat reads the selected client's folder and opens highlighted evidence, including text lines in scanned PDFs. All 17 supplied files are preserved. PDF, Word and Excel previews/downloads, reviewed edits, supplier forms, uploads, chat deletion and file Trash work. Accounts include verification, recovery and sign-out. Appearance changes, resizable panels, dictation and read-aloud are included.
 
-Ask the AI to remember a detail, then click **Accept** on its suggestion: the answer alone does not save it. The manual Client memory form uses **Save client detail** instead.
+AI memory suggestions need an **Accept** click; the answer alone does not save them. The manual memory form uses **Save client detail**.
 
-History lets you download earlier versions but cannot restore one as the current version. Edited spreadsheet downloads keep formulas and typed values, but no saved formula results; open them in Excel or LibreOffice to recalculate. Some spreadsheet functions are unsupported. Word edits may flatten mixed formatting within a paragraph. PDF certificate attachments are not assembled. Uploads allow 50 MB per file, but large documents can exceed reading limits.
+Spreadsheet downloads now include calculated values alongside formulas, including existing files and new uploads. Unsupported functions show errors. History downloads exact stored versions but cannot restore one as current. Word edits may flatten mixed paragraph formatting. PDF certificate attachments are not assembled. Uploads allow 50 MB per file; large documents can exceed reading limits. Unreadable scans fall back to whole-page evidence.
 
-In three live questions, first text appeared after **2.4–6.9 seconds**, with complete answers after **4.3–8.6 seconds**. Edits and memory suggestions undergo another check and can take longer. These are samples, not promised response times.
+Three earlier live questions showed first text in **2.4–6.9 seconds**, finishing in **4.3–8.6 seconds**. Two scan questions showed text in **7.6–7.8 seconds**, finishing in **9.7–9.9 seconds**. Edits, memory checks and initial scan processing can take longer; these are samples, not guarantees.
 
 ## how you checked it
 
-The extracted hand-in passed 89 Python tests and six JavaScript tests; the app build passed. Thirteen browser scenarios checked sources, panel behavior and interrupted questions. Earlier live checks covered eleven AWS question/edit scenarios, account separation, 50 MB upload/download, speech, deletion and persistence. The cleaned deployment passed real sign-in and client-file access checks. Original documents matched the supplied files; the submission scan found no credentials. Physical microphone capture, heavy simultaneous use and a full security review remain untested.
+Passed 102 Python tests, six JavaScript tests, 14 browser scenarios and the app build. Live checks covered a newly uploaded scan with real AWS line highlighting, existing workbook downloads, a new 5 MB workbook and accepted edits. Downloaded values read without recalculation: gross margin 0.3499015576 and debtor total 717,505.75; formulas remain intact. Original client data stayed unchanged.
+
+Earlier live checks covered eleven AWS question/edit scenarios, account separation, 50 MB transfer, speech, deletion and persistence. Original files match the supplied pack; the submission scan found no credentials. Physical microphones, native phone/email previewers, heavy simultaneous use and a full security review remain untested.
 
 ## decisions (riskiest first)
 
-1. AWS began as an optional extra and costs money. At the owner's request, this build now uses AWS Claude only, so it does **not** meet the brief's direct Anthropic API requirement.
-2. AI answers can still be wrong. Keep clients separate, show sources, leave unknown form fields blank and require acceptance of AI changes.
-3. Keep previous files and reject edits based on an outdated version. Keep service credentials on the server and outside the hand-in.
+1. AWS began as an optional extra and costs money, including scan text recognition. At the owner's request it is now the only AI provider, so this build does **not** meet the brief's direct Anthropic API requirement.
+2. AI and scanned text can be wrong. Keep clients separate, show sources, leave unknown fields blank and require acceptance of AI changes.
+3. Preserve previous files, reject outdated edits and keep service credentials on the server, outside the hand-in.
 
-Additional requested work continued beyond the brief's eight-hour limit.
+Additional requested work exceeded the brief's eight-hour limit.
 
 ## next day
 
-Add version restoration and saved spreadsheet formula results. Improve slow answers and mixed Word formatting. Add a second sign-in check and team permissions, test malicious documents and many simultaneous users, and verify a real microphone. Revisit the required direct Anthropic connection before assessment submission.
+Add version restoration. Improve slow answers and mixed Word formatting. Add a second sign-in check and team permissions; test malicious documents, simultaneous users and real microphones. Revisit the required direct Anthropic connection before submission.

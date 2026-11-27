@@ -3,11 +3,15 @@ from pathlib import Path
 import sys
 from uuid import uuid4
 sys.path.insert(0,str(Path(__file__).resolve().parents[1]))
-for key in ('VERCEL','BLOB_READ_WRITE_TOKEN','COGNITO_CLIENT_ID','WORKSPACE_PASSWORD','FOLIO_S3_BUCKET'):
+for key in ('VERCEL','BLOB_READ_WRITE_TOKEN','COGNITO_CLIENT_ID','WORKSPACE_PASSWORD','FOLIO_S3_BUCKET','FOLIO_OCR_ENABLED'):
     os.environ[key]=''
 os.environ['DATA_DIR']=str(Path.cwd()/'test-results'/('evidence-ui-storage-'+uuid4().hex[:8]))
 os.environ['AWS_BEDROCK_ENABLED']='1'
 import backend.app as app
+# Deliberate OCR fixture for deterministic browser layout checks, not production
+# extraction. Real Textract behavior is covered separately on the hosted app.
+app.ocr.detect_lines=lambda data:[{'text':'Short delivered: 6 x olive oil 5 L (back order)',
+    'rect':[.091565,.349501,.862489,.379581],'confidence':99.2}]
 import fitz
 output=Path('test-results/evidence-multipage.pdf')
 output.parent.mkdir(exist_ok=True)
