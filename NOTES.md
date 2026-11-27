@@ -1,15 +1,31 @@
 # Folio hand-in notes
 
-Started November 27, 2026, 01:18 CST. Receipt time is unknown. Subsequent owner-requested extensions continued beyond the brief's eight-hour timebox. Private operational records are excluded from the hand-in.
+Received: Thu 26 Nov 2026, 9:31 PM CT.  
+Started: Fri 27 Nov 2026, 01:18 CST.  
+Finished: Fri 27 Nov 2026, 13:54 CST.
 
-**Current decision:** the owner requested AWS Claude only. Claude Sonnet 4.6 now powers every new answer; the direct Anthropic transport, model picker and key-setup guide were removed. This intentionally deviates from the original direct-Anthropic requirement. Direct-provider acceptance is not claimed for this build.
+## what works / what doesn't
 
-**Implemented:** all 17 supplied files; selected-client context and evidence highlights; native PDF/Word/Excel previews/downloads; formula-preserving edits/recalculation; Word headings/lists; supplier PDF filling; review/acceptance; immutable versions, chats and memory. File Trash supports restoration and confirmed permanent removal of saved versions, with durable cleanup retries. Each chat has a deletion menu. Cognito provides signup, email verification/recovery, password changes and visible Sign out. New accounts have private workspaces. S3 supports ten uploads at 50 MB each, within 100 files/1 GB per client. Transcribe fills the editable composer; Polly reads answers aloud. Review/Email screens, comments and mentions remain excluded by the call.
+Chat reads the selected client's folder and opens highlighted sources. All 17 supplied files are preserved. PDF, Word and Excel previews/downloads, reviewed document edits, supplier-form filling, file uploads, chat deletion and file Trash work. Accounts support email verification, recovery and sign-out. Appearance changes, resizable panels, dictation and read-aloud are included.
 
-The supplied palette informs themes and semantic tags. Both desktop panels resize and remember widths. New questions clear old previews; cited answers automatically open evidence. Numbered references switch sources; manual Hide and client/conversation changes override delayed navigation.
+Ask the AI to remember a detail, then click **Accept** on its suggestion: the answer alone does not save it. The manual Client memory form uses **Save client detail** instead.
 
-**Checked:** 89 Python tests, six JavaScript citation tests, 13 isolated browser scenarios and the build pass. Checks include retired-provider rejection, preference migration and retained chat menus. Prior actual AWS acceptance covered eleven assessment scenario types, Cognito, full 50 MB byte-identical S3 roundtrips, Polly and Transcribe. Production checks covered account isolation, evidence navigation, chat deletion, restoration and exact S3-version cleanup. These are bounded checks; no security certification is claimed.
+History lets you download earlier versions but cannot restore one as the current version. Edited spreadsheet downloads keep formulas and typed values, but no saved formula results; open them in Excel or LibreOffice to recalculate. Some spreadsheet functions are unsupported. Word edits may flatten mixed formatting within a paragraph. PDF certificate attachments are not assembled. Uploads allow 50 MB per file, but large documents can exceed reading limits.
 
-**Decisions and risks:** AWS reads stream in one constrained generation; edit/memory proposals retain an extra review and explicit acceptance with hash/revision checks. Temporary OIDC credentials and server-only configuration stay outside source. Cognito uses one-hour HttpOnly/Secure/SameSite cookies, durable session hashes and token validation. Only two original assessment members share state. Fine-grained roles and MFA are absent. Upload grants constrain keys/bytes; committed files use inspected versions.
+In three live questions, first text appeared after **2.4–6.9 seconds**, with complete answers after **4.3–8.6 seconds**. Edits and memory suggestions undergo another check and can take longer. These are samples, not promised response times.
 
-**Another day / limits:** MFA/team roles, audit trails, parser isolation, load testing and broader semantic/adversarial evaluation. Formula/context bounds remain explicit. Edited Word paragraphs normalize mixed inline styles; PDF attachments are not assembled. Dictation is English, two minutes/8 MB; read-aloud caps at 3,000 characters. Physical microphone capture remains untested. Intermediate audio/upload objects expire by lifecycle. AWS usage is billed. Original files remain unchanged; credentials are supplied separately.
+## how you checked it
+
+The extracted hand-in passed 89 Python tests and six JavaScript tests; the app build passed. Thirteen browser scenarios checked sources, panel behavior and interrupted questions. Earlier live checks covered eleven AWS question/edit scenarios, account separation, 50 MB upload/download, speech, deletion and persistence. The cleaned deployment passed real sign-in and client-file access checks. Original documents matched the supplied files; the submission scan found no credentials. Physical microphone capture, heavy simultaneous use and a full security review remain untested.
+
+## decisions (riskiest first)
+
+1. AWS began as an optional extra and costs money. At the owner's request, this build now uses AWS Claude only, so it does **not** meet the brief's direct Anthropic API requirement.
+2. AI answers can still be wrong. Keep clients separate, show sources, leave unknown form fields blank and require acceptance of AI changes.
+3. Keep previous files and reject edits based on an outdated version. Keep service credentials on the server and outside the hand-in.
+
+Additional requested work continued beyond the brief's eight-hour limit.
+
+## next day
+
+Add version restoration and saved spreadsheet formula results. Improve slow answers and mixed Word formatting. Add a second sign-in check and team permissions, test malicious documents and many simultaneous users, and verify a real microphone. Revisit the required direct Anthropic connection before assessment submission.
