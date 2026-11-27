@@ -57,7 +57,7 @@ That's all you need. Folio uses `claude-sonnet-5-5` by default; set `ANTHROPIC_M
 ## Tests
 
 ```sh
-npm test        # 110 Python tests + 6 JavaScript tests
+npm test        # 111 Python tests + 6 JavaScript tests
 npm run build
 ```
 
