@@ -1,11 +1,5 @@
 # Folio: hand-in notes
 
-| Received | Started | Finished |
-|---|---|---|
-| Thu 26 Nov 2026, 9:31 PM CT | Fri 27 Nov, 01:18 CST | Fri 27 Nov, 15:55 CST |
-
-I kept polishing after the core worked, so total time ran past the suggested eight hours.
-
 ## What works / what doesn't
 
 **Works**
