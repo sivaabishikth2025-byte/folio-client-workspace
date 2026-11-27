@@ -1,4 +1,8 @@
-"""Server-side provider configuration. Credentials never enter workspace state."""
+"""Server-side provider configuration. Credentials never enter workspace state.
+
+If ANTHROPIC_API_KEY is set, Claude is called through the Anthropic API.
+Otherwise Claude runs on AWS Bedrock (the hosted demo uses Bedrock).
+"""
 import os
 import threading
 import time
@@ -8,20 +12,36 @@ from botocore import UNSIGNED
 from botocore.config import Config
 
 DEFAULT_BEDROCK_MODEL = 'us.anthropic.claude-sonnet-4-6'
+DEFAULT_ANTHROPIC_MODEL = 'claude-sonnet-5-5'
 _lock = threading.Lock()
 _cached = None
 
 
+def anthropic_configured():
+    return bool(os.getenv('ANTHROPIC_API_KEY', '').strip())
+
+
+def bedrock_configured():
+    return bool(os.getenv('AWS_BEARER_TOKEN_BEDROCK', '').strip() or
+                os.getenv('FOLIO_AWS_ROLE_ARN', '').strip() or
+                os.getenv('AWS_BEDROCK_ENABLED') == '1')
+
+
+def active_provider():
+    """Anthropic when its key is set, otherwise Bedrock."""
+    return 'anthropic' if anthropic_configured() else 'bedrock'
+
+
 def catalog():
-    bedrock = bool(os.getenv('AWS_BEARER_TOKEN_BEDROCK', '').strip() or
-                   os.getenv('FOLIO_AWS_ROLE_ARN', '').strip() or
-                   os.getenv('AWS_BEDROCK_ENABLED') == '1')
-    return [
-        {'id': 'bedrock', 'name': 'AWS Bedrock', 'detail': 'Claude on AWS',
-         'model': os.getenv('BEDROCK_MODEL_ID', DEFAULT_BEDROCK_MODEL),
-         'configured': bedrock,
-         'auth': 'AWS role' if os.getenv('FOLIO_AWS_ROLE_ARN') else 'Server credentials'},
-    ]
+    """The active provider is always first."""
+    anthropic = {'id': 'anthropic', 'name': 'Anthropic', 'detail': 'Claude API',
+                 'model': os.getenv('ANTHROPIC_MODEL', '').strip() or DEFAULT_ANTHROPIC_MODEL,
+                 'configured': anthropic_configured(), 'auth': 'Server API key'}
+    bedrock = {'id': 'bedrock', 'name': 'AWS Bedrock', 'detail': 'Claude on AWS',
+               'model': os.getenv('BEDROCK_MODEL_ID', DEFAULT_BEDROCK_MODEL),
+               'configured': bedrock_configured(),
+               'auth': 'AWS role' if os.getenv('FOLIO_AWS_ROLE_ARN') else 'Server credentials'}
+    return [anthropic, bedrock] if active_provider() == 'anthropic' else [bedrock]
 
 
 def bedrock_client(oidc_token=None):

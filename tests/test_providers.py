@@ -9,45 +9,125 @@ from backend.providers import catalog
 
 
 @pytest.mark.parametrize('entry',['answer_stream','_answer_once'])
-def test_removed_anthropic_path_cannot_invoke_a_provider(monkeypatch,entry):
-    monkeypatch.setenv('ANTHROPIC_API_KEY','obsolete-key-test-only')
+def test_unknown_provider_cannot_invoke_a_model(monkeypatch,entry):
     def forbidden(*args):raise AssertionError('Unsupported provider reached AWS')
     monkeypatch.setattr(assistant,'bedrock_client',forbidden)
-    async def run():return [event async for event in getattr(assistant,entry)('Test','Hello',[],[],[],[],'anthropic')]
-    with pytest.raises(ValueError,match='Only AWS Claude'):asyncio.run(run())
+    async def run():return [event async for event in getattr(assistant,entry)('Test','Hello',[],[],[],[],'untrusted-url')]
+    with pytest.raises(ValueError,match='Unknown Claude provider'):asyncio.run(run())
 
 
-def test_aws_only_default_status_and_credentials_never_persist(tmp_path, monkeypatch):
+def _local(tmp_path,monkeypatch):
     monkeypatch.setattr(app_module, 'store', Store(tmp_path))
-    monkeypatch.setenv('ANTHROPIC_API_KEY', 'secret-anthropic-test')
-    monkeypatch.setenv('AWS_BEARER_TOKEN_BEDROCK', 'secret-aws-test')
-    monkeypatch.delenv('VERCEL', raising=False)
-    monkeypatch.delenv('WORKSPACE_PASSWORD', raising=False)
+    for key in ['VERCEL','WORKSPACE_PASSWORD','COGNITO_CLIENT_ID','AWS_BEARER_TOKEN_BEDROCK','FOLIO_AWS_ROLE_ARN','AWS_BEDROCK_ENABLED','ANTHROPIC_API_KEY','ANTHROPIC_MODEL']:
+        monkeypatch.delenv(key, raising=False)
+    return TestClient(app_module.app)
+
+
+def test_provider_is_chosen_by_the_server_and_credentials_never_persist(tmp_path, monkeypatch):
+    api=_local(tmp_path,monkeypatch)
     seen = []
     async def reply(name, question, context, images, history, memory, provider, token):
         seen.append(provider)
         assert all('Ostara' not in json.dumps(x) for x in context)
         yield {'type': 'result', 'result': {'answer': 'General answer.', 'scope': 'general', 'citations': [], 'proposals': []}}
     monkeypatch.setattr(app_module, 'answer_stream', reply)
-    api = TestClient(app_module.app)
-    for selection in [{}, {'provider':'bedrock'}]:
-        r = api.post('/api/clients/northwind/chat', json={'message': 'Explain gross margin.', **selection})
-        assert r.status_code == 200 and '"type": "done"' in r.text
-    assert seen == ['bedrock', 'bedrock']
-    state = api.get('/api/clients/northwind').json()
-    assert {t['messages'][-1]['provider'] for t in state['chats']} == {'bedrock'}
+    # Nothing configured: a clear error, no model call.
+    assert api.post('/api/clients/northwind/chat', json={'message': 'hi'}).status_code == 503
+    assert not api.get('/api/status').json()['ai_ready']
+    # AWS only: Bedrock.
+    monkeypatch.setenv('AWS_BEARER_TOKEN_BEDROCK', 'secret-aws-test')
+    assert api.post('/api/clients/northwind/chat', json={'message': 'Explain gross margin.'}).status_code==200
     status=api.get('/api/status').json()
     assert [p['id'] for p in status['providers']]==['bedrock'] and status['ai_ready']
-    assert status['model']==catalog()[0]['model']
-    assert api.post('/api/clients/northwind/chat',json={'message':'Hello','provider':'anthropic'}).status_code==422
-    assert 'secret-' not in json.dumps(state) and 'secret-' not in json.dumps(catalog())
+    # Anthropic key set: Anthropic wins, even if the browser asks for Bedrock.
+    monkeypatch.setenv('ANTHROPIC_API_KEY', 'secret-anthropic-test')
+    for selection in [{}, {'provider':'bedrock'}, {'provider':'anthropic'}]:
+        r = api.post('/api/clients/northwind/chat', json={'message': 'Explain gross margin.', **selection})
+        assert r.status_code == 200 and '"type": "done"' in r.text
+    assert seen == ['bedrock', 'anthropic', 'anthropic', 'anthropic']
+    status=api.get('/api/status').json()
+    assert status['providers'][0]['id']=='anthropic' and status['model']=='claude-sonnet-5-5' and status['ai_ready']
+    monkeypatch.setenv('ANTHROPIC_MODEL','claude-opus-5-5')
+    assert api.get('/api/status').json()['model']=='claude-opus-5-5'
+    state = api.get('/api/clients/northwind').json()
+    assert 'secret-' not in json.dumps(state) and 'secret-' not in json.dumps(catalog()) and 'secret-' not in json.dumps(status)
     assert api.post('/api/clients/northwind/chat', json={'message': 'hi', 'provider': 'untrusted-url'}).status_code == 422
-    monkeypatch.delenv('AWS_BEARER_TOKEN_BEDROCK', raising=False)
-    monkeypatch.delenv('FOLIO_AWS_ROLE_ARN', raising=False)
-    monkeypatch.delenv('AWS_BEDROCK_ENABLED', raising=False)
-    assert api.post('/api/clients/northwind/chat', json={'message': 'hi', 'provider': 'bedrock'}).status_code == 503
-    assert not api.get('/api/status').json()['ai_ready']
-    assert seen == ['bedrock', 'bedrock']  # An obsolete Anthropic key cannot act as fallback.
+
+
+def _fake_anthropic(monkeypatch, result, captured, status=200, error=None, stop='end_turn'):
+    """Stand-in for api.anthropic.com that streams Server-Sent Events like the real Messages API."""
+    import httpx
+    def handler(request):
+        captured.append({'url':str(request.url),'headers':dict(request.headers),'body':json.loads(request.content)})
+        if status!=200:
+            return httpx.Response(status, json={'type':'error','error':{'type':'invalid_request_error','message':error}})
+        payload=json.dumps(result)
+        events=[{'type':'message_start','message':{'id':'msg_test','usage':{'input_tokens':10}}},
+                {'type':'content_block_start','index':0,'content_block':{'type':'text','text':''}}]
+        events+=[{'type':'content_block_delta','index':0,'delta':{'type':'text_delta','text':payload[n:n+9]}} for n in range(0,len(payload),9)]
+        events+=[{'type':'content_block_stop','index':0},{'type':'message_delta','delta':{'stop_reason':stop},'usage':{'output_tokens':50}},{'type':'message_stop'}]
+        body=''.join(f'event: {e["type"]}\ndata: {json.dumps(e)}\n\n' for e in events)
+        return httpx.Response(200, text=body, headers={'content-type':'text/event-stream'})
+    real=httpx.AsyncClient
+    monkeypatch.setattr(assistant.httpx,'AsyncClient',lambda **kw: real(transport=httpx.MockTransport(handler),**kw))
+
+
+def test_local_run_with_only_anthropic_key_answers_a_question_with_citations(tmp_path, monkeypatch):
+    api=_local(tmp_path,monkeypatch)
+    monkeypatch.setenv('ANTHROPIC_API_KEY','sk-test-local-only')
+    def forbidden(*args):raise AssertionError('Bedrock must not be used when ANTHROPIC_API_KEY is set')
+    monkeypatch.setattr(assistant,'bedrock_client',forbidden)
+    # Find the real gross-margin cell id from the seeded Northwind workbook.
+    context,sources,_=app_module.source_map(api.get('/api/clients/northwind').json() and app_module.store.read('northwind')[0])
+    margin=next(i for i in sources if i.endswith('Income statement!B8'))
+    captured=[]
+    _fake_anthropic(monkeypatch,{'answer':'Gross margin is 35.0% [1].','scope':'client','citations':[margin],'proposals':[]},captured)
+    r=api.post('/api/clients/northwind/chat',json={'message':'What is the gross margin?'})
+    assert r.status_code==200 and '"type": "done"' in r.text, r.text
+    done=json.loads([l for l in r.text.split('\n') if '"type": "done"' in l][0][6:])
+    assert done['message']['provider']=='anthropic' and done['message']['model']=='claude-sonnet-5-5'
+    assert done['message']['citations'][0]['locator']=='Income statement!B8'
+    assert '"type": "text"' in r.text  # streamed before completion
+    sent=captured[0]
+    assert sent['url']=='https://api.anthropic.com/v1/messages'
+    assert sent['headers']['x-api-key']=='sk-test-local-only' and sent['headers']['anthropic-version']=='2023-06-01'
+    body=sent['body']
+    assert body['model']=='claude-sonnet-5-5' and body['stream'] is True and body['max_tokens']==6000
+    assert body['output_config']['format']['type']=='json_schema'
+    assert body['output_config']['format']['schema']['additionalProperties'] is False
+    assert margin in body['output_config']['format']['schema']['properties']['citations']['items']['enum']
+    content=body['messages'][0]['content']
+    marked=[i for i,b in enumerate(content) if b.get('cache_control')=={'type':'ephemeral'}]
+    question=next(i for i,b in enumerate(content) if 'CURRENT USER REQUEST' in b.get('text',''))
+    assert len(marked)==1 and marked[0]<question  # evidence is cached, the question is not
+    assert not any(b.get('type')=='cache_point' for b in content)
+    assert 'Ostara' not in json.dumps(content)  # only the selected client's files are sent
+    state=api.get('/api/clients/northwind').json()
+    assert 'sk-test' not in json.dumps(state)
+
+
+@pytest.mark.parametrize('status,error,expected',[
+    (400,'Your credit balance is too low to access the Anthropic API.','out of API credit'),
+    (401,'invalid x-api-key','key was rejected'),
+    (404,'model: not-a-model','model was not found'),
+    (429,'rate limited','rate limiting'),
+    (529,'Overloaded','temporarily unavailable'),
+])
+def test_anthropic_errors_are_explained_and_never_save_an_answer(tmp_path,monkeypatch,status,error,expected):
+    api=_local(tmp_path,monkeypatch)
+    monkeypatch.setenv('ANTHROPIC_API_KEY','sk-test-local-only')
+    _fake_anthropic(monkeypatch,None,[],status=status,error=error)
+    r=api.post('/api/clients/northwind/chat',json={'message':'What is the gross margin?'})
+    assert expected in r.text and '"type": "done"' not in r.text
+    assert 'sk-test' not in r.text
+
+
+@pytest.mark.parametrize('stop',['max_tokens','refusal'])
+def test_anthropic_incomplete_answers_never_commit(monkeypatch,stop):
+    monkeypatch.setenv('ANTHROPIC_API_KEY','sk-test-local-only')
+    _fake_anthropic(monkeypatch,{'answer':'x','scope':'general','citations':[],'proposals':[]},[],stop=stop)
+    async def run():return [e async for e in assistant.answer_stream('Test','Hi',[],[],[],[],'anthropic')]
+    with pytest.raises(ValueError):asyncio.run(run())
 
 
 def test_bedrock_stream_translates_images_and_streams_one_constrained_generation(monkeypatch):

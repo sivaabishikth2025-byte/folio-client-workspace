@@ -21,7 +21,7 @@ from pydantic import BaseModel, Field
 from .storage import Store, CLIENTS, ROOT, now, uid, digest, document, public_doc, active_documents, storage_usage, Conflict, workspace_scope
 from .documents import inspect_document, apply_edits, page_image, spreadsheet_download
 from .assistant import answer_stream, validate_result
-from .providers import catalog
+from .providers import catalog, active_provider
 from . import security, cloud, accounts, ocr
 
 store=Store()
@@ -420,7 +420,7 @@ def forget(client:str,memory_id:str):
 
 
 class ChatInput(BaseModel):
-    provider:Literal["bedrock"]="bedrock"
+    provider:Literal["bedrock","anthropic"]|None=None
     message:str=Field(min_length=1,max_length=12000)
     chat_id:str|None=None
 
@@ -449,9 +449,11 @@ def delete_chat(client:str,chat_id:str):
 @app.post('/api/clients/{client}/chat')
 async def chat(client:str,body:ChatInput,request:Request):
     state,_=await asyncio.to_thread(store.read,client)
-    connection=next(p for p in catalog() if p['id']==body.provider)
+    # The server decides: ANTHROPIC_API_KEY set -> Anthropic API, otherwise AWS Bedrock.
+    provider=active_provider()
+    connection=next(p for p in catalog() if p['id']==provider)
     if not connection['configured']:
-        raise HTTPException(503,'Claude is not connected. Configure an AWS role, AWS_BEARER_TOKEN_BEDROCK, or a local AWS SDK profile on the server.')
+        raise HTTPException(503,'Claude is not connected. Set ANTHROPIC_API_KEY, or configure an AWS role, AWS_BEARER_TOKEN_BEDROCK, or a local AWS SDK profile on the server.')
     oidc_token=request.headers.get('x-vercel-oidc-token') if os.getenv('VERCEL') else None
     thread=next((t for t in state['chats'] if t['id']==body.chat_id),None) if body.chat_id else None
     if body.chat_id and not thread:raise KeyError('Chat not found')
@@ -477,7 +479,7 @@ async def chat(client:str,body:ChatInput,request:Request):
         def sse(event):return 'data: '+json.dumps(event,ensure_ascii=False)+'\n\n'
         yield sse({'type':'start','chat_id':thread_id,'message':user_message})
         try:
-            async for event in answer_stream(next(c['name'] for c in store.clients() if c['id']==client),question,context,images,history,state['memory'],body.provider,oidc_token):
+            async for event in answer_stream(next(c['name'] for c in store.clients() if c['id']==client),question,context,images,history,state['memory'],provider,oidc_token):
                 if await request.is_disconnected():return
                 if event['type'] in ('text','status'):yield sse(event);continue
                 result=event['result'];validate_result(result);ids=result.get('citations',[])
@@ -490,7 +492,7 @@ async def chat(client:str,body:ChatInput,request:Request):
                 if result.get('memory') and isinstance(result['memory'],str):
                     proposals.append({'id':uid(),'title':'Remember this client detail','reason':'This will be available in future chats for this client.','memory':result['memory'][:2000],'diff':[{'location':'Client memory','before':'','after':result['memory'][:2000]}],'status':'pending','origin':'assistant','time':now()})
                 for proposal in proposals:proposal['chat_id']=thread_id
-                message={'id':uid(),'role':'assistant','text':result['answer'],'provider':body.provider,'model':connection['model'],'scope':result.get('scope','client'),'citations':citations,'proposal_ids':[p['id'] for p in proposals],'warnings':warnings,'time':now()}
+                message={'id':uid(),'role':'assistant','text':result['answer'],'provider':provider,'model':connection['model'],'scope':result.get('scope','client'),'citations':citations,'proposal_ids':[p['id'] for p in proposals],'warnings':warnings,'time':now()}
                 def finish(s):
                     if s.get('file_epoch',0)!=state.get('file_epoch',0):raise Conflict('The client files changed while answering. Please ask again using the current files.')
                     t=next((t for t in s['chats'] if t['id']==thread_id),None)

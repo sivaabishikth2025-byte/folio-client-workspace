@@ -31,7 +31,6 @@ function fuzzyMatch(text,query){const t=text.toLowerCase(),q=query.toLowerCase()
 function displayCell(c){if(!c)return '';const v=c.value;if(typeof v!=='number')return String(v??'');if(c.format?.includes('%'))return (v*100).toLocaleString(undefined,{maximumFractionDigits:2})+'%';if(c.format?.includes('0.00'))return v.toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:2});return v.toLocaleString(undefined,{maximumFractionDigits:2})}
 
 function App(){
- const provider='bedrock';
  useEffect(()=>{try{localStorage.removeItem('folio-provider')}catch{}},[]);
  const [pane,setPane]=useState(true);
  const [appearance,setAppearance]=useState(()=>localStorage.getItem('folio-appearance')||'system');
@@ -59,6 +58,7 @@ function App(){
  const chatCount=workspace?(workspace.chats.length+(chatId&&!workspace.chats.some(t=>t.id===chatId)?1:0)):0;
  const cp=`/clients/${client}`;
  const connections=status?.providers||[];
+ const provider=connections[0]?.id||'bedrock';
  const activeProvider=connections.find(p=>p.id===provider);
  function notify(message,type='success'){setToast({message,type});}
  useEffect(()=>{if(!toast)return;const id=setTimeout(()=>setToast(null),6500);return()=>clearTimeout(id)},[toast]);

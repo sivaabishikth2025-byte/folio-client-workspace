@@ -4,7 +4,7 @@ A client document workspace: ask questions across one client's folder, open high
 
 [Live workspace](https://folio-client-workspace.vercel.app) · [Source](https://github.com/sivaabishikth2025-byte/folio-client-workspace)
 
-Claude Sonnet 4.6 runs through AWS. The owner requested AWS-only operation, intentionally superseding the original brief's direct-Anthropic requirement. No direct Anthropic key is used. The submitted source excludes private operational records, deployment-specific provisioning scripts and the original instruction/mock-up pack. The 17 fictional client documents remain unchanged as application data.
+Claude runs through the **Anthropic API** when `ANTHROPIC_API_KEY` is set (default model `claude-sonnet-5-5`), and through AWS Bedrock otherwise. The hosted demo uses AWS Bedrock (Claude Sonnet 4.6) for cost reasons; no Anthropic key is set there. The submitted source excludes private operational records, deployment-specific provisioning scripts and the original instruction/mock-up pack. The 17 fictional client documents remain unchanged as application data.
 
 ## Run locally
 
@@ -16,7 +16,15 @@ npm start
 
 The launcher creates a virtual environment, installs dependencies, copies `.env.example` to an ignored `.env`, builds the frontend and serves http://127.0.0.1:8000. The first run needs internet access.
 
-Configure an authorized AWS CLI/SDK profile and set `AWS_BEDROCK_ENABLED=1` in `.env`. Defaults are `BEDROCK_REGION=us-east-1` and `BEDROCK_MODEL_ID=us.anthropic.claude-sonnet-4-6`. Alternatively provide a Bedrock API credential through `AWS_BEARER_TOKEN_BEDROCK`; omit that variable entirely when using profile credentials. Do not set `FOLIO_AWS_ROLE_ARN` for local profile access. Keep all secrets in ignored local configuration or your hosting provider's secret manager. Never put credentials in source, chat, screenshots or the submission.
+**Claude through the Anthropic API (simplest):** put your key in `.env`:
+
+```sh
+ANTHROPIC_API_KEY=your-anthropic-api-key
+```
+
+Restart and ask a question. The model is `claude-sonnet-5-5` unless you set `ANTHROPIC_MODEL`. When `ANTHROPIC_API_KEY` is set it is always used; when it is not set, Folio uses AWS Bedrock.
+
+**Or Claude through AWS Bedrock:** configure an authorized AWS CLI/SDK profile and set `AWS_BEDROCK_ENABLED=1` in `.env`. Defaults are `BEDROCK_REGION=us-east-1` and `BEDROCK_MODEL_ID=us.anthropic.claude-sonnet-4-6`. Alternatively provide a Bedrock API credential through `AWS_BEARER_TOKEN_BEDROCK`; omit that variable entirely when using profile credentials. Do not set `FOLIO_AWS_ROLE_ARN` for local profile access. Keep all secrets in ignored local configuration or your hosting provider's secret manager. Never put credentials in source, chat, screenshots or the submission.
 
 Without AWS configuration, document browsing/editing and memory remain available; chat reports a configuration error. Localhost can run without authentication for isolated development. Hosted deployments require Cognito.
 
@@ -57,10 +65,10 @@ npm test
 npm run build
 ```
 
-The export/OCR checkpoint passed 102 Python tests, six JavaScript tests and 14 deterministic browser scenarios. A real Textract check located the scanned short-delivery line. Export tests read saved values with `openpyxl(data_only=True)`: `Income statement!B8 = 0.3499015576323988`, `Debtors!C9 = 717505.75`, with formulas and untouched source files preserved. Live authenticated checks also covered a new scan upload and actual Claude line citations, a new 5 MB S3 workbook, accepted edits with updated saved results, and exact original/history downloads. Original client states stayed unchanged. Native phone and email preview apps were not directly tested. Tests cover account/client boundaries, same-origin mutations, stale edits, upload replay, session revocation, streaming/deletion races and durable cleanup. Browser tests use a labeled fixture model, fixture OCR coordinates and real document parsers: start `.venv/Scripts/python scripts/run-evidence-ui.py`, then `node scripts/check-evidence-ui.mjs` with Chrome installed. Test outputs stay in ignored `test-results/`.
+The checkpoint passed 110 Python tests (including a local run with only `ANTHROPIC_API_KEY` set, against a simulated Anthropic API), six JavaScript tests and 14 deterministic browser scenarios. A real Textract check located the scanned short-delivery line. Export tests read saved values with `openpyxl(data_only=True)`: `Income statement!B8 = 0.3499015576323988`, `Debtors!C9 = 717505.75`, with formulas and untouched source files preserved. Live authenticated checks also covered a new scan upload and actual Claude line citations, a new 5 MB S3 workbook, accepted edits with updated saved results, and exact original/history downloads. Original client states stayed unchanged. Native phone and email preview apps were not directly tested. Tests cover account/client boundaries, same-origin mutations, stale edits, upload replay, session revocation, streaming/deletion races and durable cleanup. Browser tests use a labeled fixture model, fixture OCR coordinates and real document parsers: start `.venv/Scripts/python scripts/run-evidence-ui.py`, then `node scripts/check-evidence-ui.mjs` with Chrome installed. Test outputs stay in ignored `test-results/`.
 
 The opt-in `scripts/acceptance.py` runner makes billable AWS requests and accepts proposals only against a separate localhost server. Use a fresh `DATA_DIR`; never use working state. Supply any needed test credentials through environment variables. Tests generate synthetic login identities instead of distributing reusable examples.
 
 These checks are not a penetration-test certification. MFA, fine-grained team roles, parser sandboxing, load testing and broader semantic/adversarial evaluation remain future work. Unsupported formulas are exposed, not guessed. Edited Word paragraphs normalize mixed inline styles; unchanged paragraphs preserve formatting. PDF attachment assembly is absent. Explicit review is still necessary for factual correctness.
 
-Received Thursday November 26, 2026, 9:31 PM CT. Implementation started November 27, 2026, 01:18 CST; the finish time is recorded in NOTES.md. Later owner-requested extensions continued beyond the original eight-hour limit; the expanded release must not be represented as completed inside that timebox. NOTES.md summarizes the hand-in. `python scripts/package.py` produces the submission ZIP and per-file SHA-256 manifest from an explicit source allowlist.
+Received Thursday November 26, 2026, 9:31 PM CT. I started on November 27, 2026, 01:18 CST; the finish time is in NOTES.md. I kept polishing after the core was working, so the total time ran past the suggested eight hours. NOTES.md summarizes the hand-in. `python scripts/package.py` produces the submission ZIP and per-file SHA-256 manifest from an explicit source allowlist.
