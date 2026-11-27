@@ -2,7 +2,7 @@
 
 Folio is a workspace for an accounting firm. Pick a client, browse their folder, and ask Claude questions about it. Every answer shows where it came from, and nothing in a file changes until you accept it.
 
-**Live:** https://folio-client-workspace.vercel.app (sign-in details are sent separately)
+**Live:** https://folio-client-workspace.vercel.app (create an account with your email to sign in)
 
 ## What it does
 
