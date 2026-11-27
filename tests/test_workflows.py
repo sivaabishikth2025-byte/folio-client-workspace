@@ -149,7 +149,7 @@ def test_compare_and_swap_detects_concurrent_state_write(env):
 def test_streamed_answer_persists_valid_citations_and_pending_edits(env,monkeypatch):
     api,store=env;monkeypatch.setenv('AWS_BEDROCK_ENABLED','1')
     d=pick(store,'northwind','Management')
-    async def simulated(client_name,question,context,images,history,memory,provider,oidc_token):
+    async def simulated(client_name,question,context,images,history,memory,provider,oidc_token,edit_log=None):
         assert provider=='bedrock' and oidc_token is None
         assert client_name=='Northwind Trading'
         assert all('Ostara' not in json.dumps(item) for item in context)

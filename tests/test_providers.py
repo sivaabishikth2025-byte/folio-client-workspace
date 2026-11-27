@@ -26,7 +26,7 @@ def _local(tmp_path,monkeypatch):
 def test_provider_is_chosen_by_the_server_and_credentials_never_persist(tmp_path, monkeypatch):
     api=_local(tmp_path,monkeypatch)
     seen = []
-    async def reply(name, question, context, images, history, memory, provider, token):
+    async def reply(name, question, context, images, history, memory, provider, token, edit_log=None):
         seen.append(provider)
         assert all('Ostara' not in json.dumps(x) for x in context)
         yield {'type': 'result', 'result': {'answer': 'General answer.', 'scope': 'general', 'citations': [], 'proposals': []}}

@@ -27,12 +27,12 @@ TOOL={'name':'deliver_answer','description':'Return the grounded answer and opti
 PROVIDERS=('bedrock','anthropic')
 
 
-async def answer_stream(client_name,question,context,images,history,memory,provider="bedrock",oidc_token=None):
+async def answer_stream(client_name,question,context,images,history,memory,provider="bedrock",oidc_token=None,edit_log=None):
     if provider not in PROVIDERS:raise ValueError('Unknown Claude provider.')
     # Reads use one constrained generation. Writes retain an evidence review.
     # Text is provisional while streaming; citations and edits activate only on done.
     draft_event=None
-    async with aclosing(_answer_once(client_name,question,context,images,history,memory,provider,oidc_token)) as response:
+    async with aclosing(_answer_once(client_name,question,context,images,history,memory,provider,oidc_token,edit_log)) as response:
         async for event in response:
             if event['type']=='result':
                 validate_result(event['result']);draft_event=event
@@ -54,7 +54,7 @@ async def answer_stream(client_name,question,context,images,history,memory,provi
         'When filling a form, include every known requested field, not only the first one. Unknown fields must remain empty. '
         'ORIGINAL USER REQUEST: '+question+'\nUNTRUSTED DRAFT: '+json.dumps(draft,ensure_ascii=False))
     reviewed=None
-    async with aclosing(_answer_once(client_name,review,context,images,history,memory,provider,oidc_token)) as response:
+    async with aclosing(_answer_once(client_name,review,context,images,history,memory,provider,oidc_token,edit_log)) as response:
         async for event in response:
             if event['type']=='text':yield event
             if event['type']=='result':reviewed=event['result']
@@ -63,7 +63,7 @@ async def answer_stream(client_name,question,context,images,history,memory,provi
     yield {'type':'result','result':reviewed}
 
 
-async def _answer_once(client_name,question,context,images,history,memory,provider="bedrock",oidc_token=None):
+async def _answer_once(client_name,question,context,images,history,memory,provider="bedrock",oidc_token=None,edit_log=None):
     if provider not in PROVIDERS:raise ValueError('Unknown Claude provider.')
     # Keep every source's content; full preview metadata stays on the server.
     model_context=[{**doc,'blocks':[{k:v for k,v in block.items() if k not in
@@ -76,7 +76,10 @@ async def _answer_once(client_name,question,context,images,history,memory,provid
         content.append({'type':'image','source':{'type':'base64','media_type':img['type'],'data':base64.b64encode(img['data']).decode()}})
     # Cache only identical evidence, never answers or the changing question/history.
     content.append({'type':'cache_point'})
-    content.append({'type':'text','text':f'Selected-client conversation history (context only):\n{json.dumps(history[-16:],ensure_ascii=False)}\nCURRENT USER REQUEST:\n{question}'})
+    edits=('ACCEPTED EDITS TO THIS CLIENT\'S FILES (newest first; context only). "before" is the value the cell or text had '
+        'immediately before that edit was accepted. For undo or revert requests, propose restoring the "before" value of the most '
+        'recent matching edit, not the current file value:\n'+json.dumps(edit_log,ensure_ascii=False)+'\n') if edit_log else ''
+    content.append({'type':'text','text':f'Selected-client conversation history (context only):\n{json.dumps(history[-16:],ensure_ascii=False)}\n{edits}CURRENT USER REQUEST:\n{question}'})
     tool = copy.deepcopy(TOOL)
     tool['strict'] = True
     def close_schema(schema):

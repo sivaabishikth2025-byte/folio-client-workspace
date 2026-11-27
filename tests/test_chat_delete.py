@@ -97,3 +97,20 @@ def test_deleting_chats_cannot_reset_daily_model_usage_limit(local,monkeypatch):
     response=api.post('/api/clients/northwind/chat',json={'message':'Must remain limited'})
     assert response.status_code==400 and 'daily chat limit' in response.text
     assert store.read('northwind')[0]['chats']==[]
+
+
+def test_revert_request_sees_the_value_before_the_last_accepted_edit(local,monkeypatch):
+    api,store=local
+    doc=next(d for d in api.get('/api/clients/northwind').json()['documents'] if d['name']=='Management accounts Aug 2026.xlsx')
+    proposal=api.post('/api/clients/northwind/proposals',json={'document_id':doc['id'],'revision':doc['revision'],'changes':[{'sheet':'Income statement','cell':'B3','value':4455901}]}).json()
+    assert api.post(f"/api/clients/northwind/proposals/{proposal['id']}/accept").status_code==200
+    seen={}
+    async def capture(*args):
+        seen['edit_log']=args[8]
+        yield {'type':'result','result':{'answer':'Fixture answer','scope':'general','citations':[],'proposals':[]}}
+    monkeypatch.setenv('AWS_BEDROCK_ENABLED','1');monkeypatch.setattr(module,'answer_stream',capture)
+    assert events(api.post('/api/clients/northwind/chat',json={'message':'revert'}))[-1]['type']=='done'
+    latest=seen['edit_log'][0]
+    assert latest['file']=='Management accounts Aug 2026.xlsx'
+    change=latest['changes'][0]
+    assert 'B3' in change['location'] and str(change['before']).replace(',','').startswith('4812300') and str(change['after']).replace(',','').startswith('4455901')

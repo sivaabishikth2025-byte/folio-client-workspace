@@ -446,6 +446,16 @@ def delete_chat(client:str,chat_id:str):
     return store.mutate(client,remove)
 
 
+def accepted_edit_log(state,limit=20):
+    """Accepted file edits with their before/after values, so undo requests know what to restore."""
+    names={d['id']:d['name'] for d in state.get('documents',[])}
+    log=[]
+    for p in sorted((p for p in state['proposals'] if p.get('status')=='accepted' and not p.get('memory')),key=lambda p:p.get('accepted_at',''),reverse=True)[:limit]:
+        log.append({'file':names.get(p.get('document_id'),p.get('document_id')),'edit':p.get('title',''),'accepted_at':p.get('accepted_at',''),
+                    'changes':[{'location':r.get('location'),'before':r.get('before'),'after':r.get('after')} for r in p.get('diff',[])][:50]})
+    return log
+
+
 @app.post('/api/clients/{client}/chat')
 async def chat(client:str,body:ChatInput,request:Request):
     state,_=await asyncio.to_thread(store.read,client)
@@ -463,6 +473,7 @@ async def chat(client:str,body:ChatInput,request:Request):
     question=body.message.strip()
     user_message={'id':uid(),'role':'user','text':question,'time':now()}
     history=[{'role':m['role'],'text':m['text']} for m in thread['messages']] if thread else []
+    edit_log=accepted_edit_log(state)
     def begin(s):
         today=now()[:10]
         daily=daily_chat_usage(s,today)
@@ -479,7 +490,7 @@ async def chat(client:str,body:ChatInput,request:Request):
         def sse(event):return 'data: '+json.dumps(event,ensure_ascii=False)+'\n\n'
         yield sse({'type':'start','chat_id':thread_id,'message':user_message})
         try:
-            async for event in answer_stream(next(c['name'] for c in store.clients() if c['id']==client),question,context,images,history,state['memory'],provider,oidc_token):
+            async for event in answer_stream(next(c['name'] for c in store.clients() if c['id']==client),question,context,images,history,state['memory'],provider,oidc_token,edit_log):
                 if await request.is_disconnected():return
                 if event['type'] in ('text','status'):yield sse(event);continue
                 result=event['result'];validate_result(result);ids=result.get('citations',[])
