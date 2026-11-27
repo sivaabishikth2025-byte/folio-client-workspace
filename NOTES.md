@@ -9,8 +9,7 @@
 - **Platform.** Cognito accounts with verification and recovery, private Blob storage, Trash, and voice input and output (Transcribe and Polly).
 
 **Open items**
-- Restoring a previous version from History (versions can already be downloaded).
-- Run-level Word formatting on edits. Assembling attachments into PDF certificates.
+- Run-level Word formatting (e.g. mixed bold within one paragraph) can flatten on edit; headings and bullets are kept.
 - Latency: first token at 2.4–7.8 s and full answers at 4.3–9.9 s on Bedrock. Writes add a second review pass.
 
 ## Verification
@@ -31,12 +30,11 @@
 
 1. **Model provider.** The Anthropic Messages API is used when `ANTHROPIC_API_KEY` is set (`ANTHROPIC_MODEL`, default `claude-sonnet-5-5`). Otherwise the app uses AWS Bedrock. The hosted demo runs on Bedrock for cost reasons. Both paths share one prompt, one schema and one validation layer. The provider is chosen on the server, never by the client.
 2. **Treat model and OCR output as untrusted.** Answers must cite evidence, unknown form fields stay blank, and every change needs explicit approval. This trades a little speed and an extra click for correctness on financial data.
-3. **Client data is never lost or overwritten.** Every file is versioned, stale writes are rejected, and credentials stay server-side.
+3. **Client data is never lost or overwritten.** Every write keeps the previous version, stale writes are rejected, and credentials stay server-side.
 
 ## Roadmap
 
-1. Version restore from History.
-2. Latency: stream the review pass and cache parsed documents across chats.
-3. Keep run-level formatting when editing Word files.
-4. MFA and per-client roles (owner, reviewer, read-only).
-5. Adversarial test suite: malicious uploads, injection corpora, concurrent editors.
+1. Latency: stream the review pass and cache parsed documents across chats.
+2. Keep run-level formatting when editing Word files.
+3. MFA and per-client roles (owner, reviewer, read-only).
+4. Adversarial test suite: malicious uploads, injection corpora, concurrent editors.
