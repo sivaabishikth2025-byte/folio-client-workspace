@@ -466,7 +466,7 @@ async def chat(client:str,body:ChatInput,request:Request):
     def begin(s):
         today=now()[:10]
         daily=daily_chat_usage(s,today)
-        if daily>=int(os.getenv('DAILY_CHAT_LIMIT','30')):
+        if daily>=int(os.getenv('DAILY_CHAT_LIMIT','500')):
             raise ValueError('This client has reached the daily chat limit. Please try again tomorrow.')
         t=next((t for t in s['chats'] if t['id']==thread_id),None)
         if not t:
