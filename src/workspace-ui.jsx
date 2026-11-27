@@ -1,5 +1,5 @@
 import React, {useEffect, useRef, useState} from 'react';
-import {Moon, RefreshCw, ShieldCheck, Sparkles, Sun, Monitor} from 'lucide-react';
+import {RefreshCw, ShieldCheck, Sparkles} from 'lucide-react';
 
 export function modelLabel(model){
  const value=String(model||'');
@@ -38,7 +38,7 @@ export function ResizeHandle({kind,value,min,max,onChange,defaultValue,reverse=f
 export function WorkspaceSettings({status,connection,appearance,setAppearance,currentPassword,setCurrentPassword,nextPassword,setNextPassword,changePassword,refresh}){
  return <>
   <span className="section-eyebrow">YOUR WORKSPACE</span><h2 id="modal-title">Workspace settings</h2><p className="modal-intro">Set your appearance and account preferences.</p>
-  <section className="settings-section appearance-settings"><h3>Appearance</h3><div role="group" aria-label="Appearance">{[['light',Sun],['dark',Moon],['system',Monitor]].map(([id,Icon])=><button key={id} aria-pressed={appearance===id} className={appearance===id?'selected':''} onClick={()=>setAppearance(id)}><Icon size={17}/>{id[0].toUpperCase()+id.slice(1)}</button>)}</div></section>
+
   <section className="settings-section"><div className="settings-section-heading"><h3>Assistant</h3><button className="icon" aria-label="Refresh assistant availability" onClick={refresh}><RefreshCw size={16}/></button></div><div className="model-settings-list"><div className="model-setting"><Sparkles size={19}/><span><strong>{modelLabel(connection?.model)}</strong><small>Included with your workspace</small></span><span className={'status-pill '+(connection?.configured?'connected':'')}>{connection?.configured?'Ready':'Unavailable'}</span></div></div></section>
   {status?.account_mode==='cognito'&&<details className="account-password settings-section"><summary>Change account password</summary><input type="password" autoComplete="current-password" aria-label="Current password" placeholder="Current password" value={currentPassword} onChange={e=>setCurrentPassword(e.target.value)}/><input type="password" autoComplete="new-password" aria-label="New account password" placeholder="New password (12+ characters)" value={nextPassword} onChange={e=>setNextPassword(e.target.value)}/><button className="secondary" disabled={!currentPassword||nextPassword.length<12} onClick={changePassword}>Update password</button></details>}
   <p className="settings-note"><ShieldCheck size={16}/>Changes are saved automatically. Voice uses AWS to transcribe recordings and read answers aloud.</p>

@@ -33,8 +33,8 @@ function displayCell(c){if(!c)return '';const v=c.value;if(typeof v!=='number')r
 function App(){
  useEffect(()=>{try{localStorage.removeItem('folio-provider')}catch{}},[]);
  const [pane,setPane]=useState(true);
- const [appearance,setAppearance]=useState(()=>localStorage.getItem('folio-appearance')||'system');
- useEffect(()=>{const mq=matchMedia('(prefers-color-scheme: dark)');const apply=()=>document.documentElement.dataset.theme=appearance==='system'?(mq.matches?'dark':'light'):appearance;apply();localStorage.setItem('folio-appearance',appearance);mq.addEventListener('change',apply);return()=>mq.removeEventListener('change',apply)},[appearance]);
+ const [appearance,setAppearance]=useState('light');
+ useEffect(()=>{document.documentElement.dataset.theme='light';localStorage.removeItem('folio-appearance')},[]);
  async function signOut(){abortRef.current?.abort();try{await api('/auth/logout',{method:'POST'});window.dispatchEvent(new Event('folio-auth-required'))}catch(e){notify(e.message,'error')}}
  function togglePane(){if(pane)hidePane();else if(window.innerWidth<=1000){setSidebar(true);setNavTab('files')}else setPane(true)}
  function hidePane(){setPane(false);setSelected(null);setDoc(null);setCitation(null);setExpanded(false);docRequest.current++}
