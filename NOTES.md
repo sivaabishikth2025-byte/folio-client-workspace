@@ -15,7 +15,7 @@
 
 ## Verification
 
-- **Automated:** 112 backend and 6 frontend tests. They cover client isolation, citation validation, stale-write rejection and both model providers.
+- **Automated:** 113 backend and 6 frontend tests. They cover client isolation, citation validation, stale-write rejection and both model providers.
 - **End-to-end on production:** every scenario from the kickoff call, including cross-client refusal, VAT-labelled general knowledge, the VAT-column edit through Accept, the Seabreeze form, scan highlighting, a prompt injection in a client document, and client memory.
 - **Output integrity:** downloaded files were opened outside the app with formulas and values intact. The seed data is unchanged.
 

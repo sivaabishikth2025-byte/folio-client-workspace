@@ -321,6 +321,11 @@ class ProposalInput(BaseModel):
 def prepare_proposal(client,state,doc_id,changes,title,reason,origin='manual',sources=None):
     doc=document(state,doc_id);before=inspect(doc);sources=sources or {}
     if not isinstance(changes,list) or not 1<=len(changes)<=500:raise ValueError('Provide between 1 and 500 changes.')
+    if origin=='assistant' and doc['ext']=='xlsx':
+        # Formula cells recalculate on their own; the assistant may never replace a formula with a typed value.
+        formulas={(s['name'],c['ref']) for s in before['sheets'] for c in s['cells'] if str(c.get('input','')).startswith('=')}
+        changes=[c for c in changes if not (isinstance(c,dict) and (c.get('sheet'),c.get('cell')) in formulas and not str(c.get('value','')).startswith('='))]
+        if not changes:raise ValueError('Those cells are formulas and recalculate automatically; change the input cells instead.')
     rows=[];unique=set()
     for c in changes:
         if not isinstance(c,dict) or 'value' not in c:raise ValueError('Malformed edit.')

@@ -114,3 +114,16 @@ def test_revert_request_sees_the_value_before_the_last_accepted_edit(local,monke
     assert latest['file']=='Management accounts Aug 2026.xlsx'
     change=latest['changes'][0]
     assert 'B3' in change['location'] and str(change['before']).replace(',','').startswith('4812300') and str(change['after']).replace(',','').startswith('4455901')
+
+
+def test_assistant_edits_never_replace_formulas_with_typed_values(local):
+    api,store=local
+    state=store.read('northwind')[0]
+    doc=next(d for d in state['documents'] if d['name']=='Management accounts Aug 2026.xlsx')
+    p=module.prepare_proposal('northwind',state,doc['id'],[{'sheet':'Income statement','cell':'B3','value':5000000},{'sheet':'Income statement','cell':'B5','value':6206450}],'Edit','Test','assistant',{})
+    assert [d['location'] for d in p['diff']]==['Income statement!B3']
+    assert any(i['location']=='Income statement!B5' and i['formula'] for i in p['impacts'])
+    with pytest.raises(ValueError,match='formulas'):
+        module.prepare_proposal('northwind',state,doc['id'],[{'sheet':'Income statement','cell':'B5','value':1}],'Edit','Test','assistant',{})
+    restored=module.prepare_proposal('northwind',state,doc['id'],[{'sheet':'Income statement','cell':'B5','value':'=SUM(B3:B4)'}],'Edit','Test','assistant',{})
+    assert restored['diff'][0]['after']=='=SUM(B3:B4)'
