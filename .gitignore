@@ -1,0 +1,26 @@
+node_modules/
+dist/
+.venv/
+__pycache__/
+.pytest_cache/
+.env
+.env.*
+!.env.example
+
+# Private project records and account access must never enter the hand-in.
+/audit/
+/infra/
+/reference/
+/AUDIT.md
+/BRIEF.md
+/PROJECT_REQUIREMENTS.md
+Folio-*-access.txt
+/scripts/configure_*.py
+storage/
+test-results/
+*.log
+.DS_Store
+
+.vercel
+.env*
+!.env.example

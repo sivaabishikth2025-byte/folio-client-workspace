@@ -1,0 +1,66 @@
+%PDF-1.7
+%‚„œ”
+1 0 obj
+<< /Type /Catalog /Pages 2 0 R >>
+endobj
+2 0 obj
+<< /Type /Pages /Kids [7 0 R] /Count 1 >>
+endobj
+3 0 obj
+<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica /Encoding /WinAnsiEncoding >>
+endobj
+4 0 obj
+<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica-Bold /Encoding /WinAnsiEncoding >>
+endobj
+5 0 obj
+<< /Type /Font /Subtype /Type1 /BaseFont /ZapfDingbats >>
+endobj
+6 0 obj
+<< /Length 1117 >>
+stream
+BT
+/F2 16 Tf 1 0 0 1 56 770.0 Tm (Tax invoice INV-1043) Tj
+/F2 10 Tf 1 0 0 1 56 750.0 Tm (From) Tj
+/F1 10 Tf 1 0 0 1 226 750.0 Tm (Halden Partners \(Pty\) Ltd, VAT 4410587722) Tj
+/F2 10 Tf 1 0 0 1 56 735.0 Tm (To) Tj
+/F1 10 Tf 1 0 0 1 226 735.0 Tm (Northwind Trading \(Pty\) Ltd, VAT 4870231956) Tj
+/F2 10 Tf 1 0 0 1 56 720.0 Tm (Invoice date) Tj
+/F1 10 Tf 1 0 0 1 226 720.0 Tm (30 September 2026) Tj
+/F2 10 Tf 1 0 0 1 56 705.0 Tm (Due date) Tj
+/F1 10 Tf 1 0 0 1 226 705.0 Tm (30 October 2026) Tj
+/F2 10 Tf 1 0 0 1 56 682.0 Tm (Managed IT support, September 2026) Tj
+/F1 10 Tf 1 0 0 1 226 682.0 Tm (R 42 500.00) Tj
+/F2 10 Tf 1 0 0 1 56 667.0 Tm (On-site visits, 6 hours at R 1 850) Tj
+/F1 10 Tf 1 0 0 1 226 667.0 Tm (R 11 100.00) Tj
+/F2 10 Tf 1 0 0 1 56 652.0 Tm (Subtotal) Tj
+/F1 10 Tf 1 0 0 1 226 652.0 Tm (R 53 600.00) Tj
+/F2 10 Tf 1 0 0 1 56 637.0 Tm (VAT at 15%) Tj
+/F1 10 Tf 1 0 0 1 226 637.0 Tm (R 8 040.00) Tj
+/F2 10 Tf 1 0 0 1 56 622.0 Tm (Total due) Tj
+/F1 10 Tf 1 0 0 1 226 622.0 Tm (R 61 640.00) Tj
+ET
+BT /F1 7.5 Tf 1 0 0 1 56 28 Tm (Halden Partners ∑ Tax invoice \(made-up document\)   Page 1 of 1) Tj ET
+endstream
+endobj
+7 0 obj
+<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] /Resources << /Font << /F1 3 0 R /F2 4 0 R /Helv 3 0 R /ZaDb 5 0 R >> >> /Contents 6 0 R >>
+endobj
+8 0 obj
+<< /Title (Tax invoice INV-1043) /Producer (made-up file) >>
+endobj
+xref
+0 9
+0000000000 65535 f 
+0000000015 00000 n 
+0000000064 00000 n 
+0000000121 00000 n 
+0000000218 00000 n 
+0000000320 00000 n 
+0000000393 00000 n 
+0000001562 00000 n 
+0000001722 00000 n 
+trailer
+<< /Size 9 /Root 1 0 R >>
+startxref
+1798
+%%EOF

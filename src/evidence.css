@@ -1,0 +1,11 @@
+.app .markdown .inline-citation{display:inline-flex;align-items:center;justify-content:center;min-width:22px;height:22px;margin:0 3px;padding:0 5px;vertical-align:baseline;border:1px solid #bfd1d1;border-radius:5px;background:#edf4f3;color:#315d67;font-size:11px;font-weight:650;line-height:1;cursor:pointer}
+.app .markdown .inline-citation:hover,.app .markdown .inline-citation[aria-pressed=true]{background:#e7decd;border-color:#ad935e;color:#5d4c24}
+.app .inline-citation:focus-visible,.app .sources button:focus-visible{outline:2px solid #62929e;outline-offset:3px}
+.app .sources button[aria-pressed=true]{background:#f2eadc;border-color:#b79d63}
+.app .pdf-page>img{height:auto}
+.app .image-preview img.evidence-highlight{outline:3px solid #ab8e50;outline-offset:3px;box-shadow:0 0 0 7px #e7decd88}
+.app .evidence-back{display:none}
+[data-theme=dark] .app .markdown .inline-citation{background:#294550;border-color:#54757d;color:#b6d9df}
+[data-theme=dark] .app .markdown .inline-citation:hover,[data-theme=dark] .app .markdown .inline-citation[aria-pressed=true]{background:#45432f;border-color:#998958;color:#f0e3b7}
+[data-theme=dark] .app .sources button[aria-pressed=true]{background:#45432f;border-color:#998958}
+@media(max-width:1000px){.app .evidence-banner{flex-wrap:wrap;gap:8px}.app .evidence-back{display:inline-flex;align-items:center;gap:3px;padding:6px 0;color:inherit;font-size:11px;font-weight:600;background:transparent;border:0;margin-left:auto}.app .evidence-banner .evidence-label{display:none}}

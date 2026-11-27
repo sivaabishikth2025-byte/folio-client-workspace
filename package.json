@@ -1,0 +1,14 @@
+{
+  "name": "folio-client-workspace",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "start": "node scripts/start.mjs",
+    "dev": "vite --host 127.0.0.1",
+    "build": "vite build",
+    "test": "node scripts/test.mjs"
+  },
+  "dependencies": {"react": "^19.0.0", "react-dom": "^19.0.0", "lucide-react": "^0.468.0", "react-markdown": "^9.0.3", "remark-gfm": "^4.0.0"},
+  "devDependencies": {"vite": "^6.3.5", "@vitejs/plugin-react": "^4.4.1", "@playwright/test": "^1.51.1"}
+}

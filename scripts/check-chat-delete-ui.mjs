@@ -1,0 +1,61 @@
+// Run against an isolated localhost server with a labeled fixture model.
+import {chromium} from '@playwright/test';
+import assert from 'node:assert/strict';
+import {writeFile} from 'node:fs/promises';
+const base=process.env.CHAT_TEST_URL||'http://127.0.0.1:8008';assert.equal(new URL(base).hostname,'127.0.0.1');
+const browser=await chromium.launch({headless:true,channel:process.env.PLAYWRIGHT_CHANNEL||'chrome'});
+const page=await browser.newPage({viewport:{width:1440,height:1000}});const api=page.request;
+const checks=[],errors=[];page.on('pageerror',e=>errors.push(e.message));let fixture;
+async function json(r){assert(r.ok(),`HTTP ${r.status()}`);return r.json()}
+const title=i=>['First saved conversation','Second saved conversation','Third saved conversation'][i];
+try {
+ fixture=await json(await api.post(base+'/api/clients',{data:{name:'Chat menu QA '+Date.now()}}));const cp=base+'/api/clients/'+fixture.id;
+ for(let i=0;i<3;i++)assert((await api.post(cp+'/chat',{data:{message:title(i)}})).ok());
+ await page.goto(base);await page.locator('.client-button').click();await page.locator('.client-menu button').filter({hasText:fixture.name}).click();
+ await page.getByRole('button',{name:'Chats 3',exact:true}).click();
+ assert.equal(await page.locator('.chat-options').count(),3);
+ await page.getByTitle(title(0),{exact:true}).click();
+ await page.getByTitle(title(1),{exact:true}).click({button:'right'});
+ await page.getByRole('menuitem',{name:'Delete chat',exact:true}).waitFor();
+ await page.screenshot({path:'test-results/chat-context-menu-desktop.png'});
+ await page.getByRole('menuitem',{name:'Delete chat',exact:true}).click();
+ assert((await page.getByRole('alertdialog').innerText()).includes(title(1)));
+ await page.getByRole('button',{name:'Cancel',exact:true}).click();
+ assert.equal((await json(await api.get(cp))).chats.length,3);
+ checks.push('Every row has an options button; right-click targets its own chat; cancellation preserves it');
+ await page.getByRole('button',{name:'Options for '+title(1),exact:true}).click();
+ await page.getByRole('menuitem',{name:'Delete chat',exact:true}).click();await page.getByRole('button',{name:'Delete chat',exact:true}).click();
+ await page.getByRole('button',{name:'Chats 2',exact:true}).waitFor();
+ assert.equal(await page.getByTitle(title(1),{exact:true}).count(),0);
+ assert.equal(await page.getByTitle(title(0),{exact:true}).getAttribute('aria-current'),'true');
+ checks.push('Deleting an inactive row updates count without closing the active chat');
+ await page.getByTitle(title(2),{exact:true}).focus();await page.keyboard.press('Shift+F10');
+ await page.getByRole('menuitem',{name:'Delete chat',exact:true}).waitFor();await page.keyboard.press('Escape');
+ assert.equal(await page.getByRole('menu',{name:'Chat options',exact:true}).count(),0);
+ checks.push('Keyboard context menu and Escape work');
+ await page.setViewportSize({width:390,height:844});
+ await page.getByRole('button',{name:'Options for '+title(2),exact:true}).click();
+ const menu=await page.getByRole('menu',{name:'Chat options',exact:true}).boundingBox();assert(menu.x>=0&&menu.x+menu.width<=390);
+ await page.getByRole('menuitem',{name:'Delete chat',exact:true}).click();
+ await page.locator('.chat-delete-dialog').screenshot({path:'test-results/chat-delete-mobile.png'});
+ await page.emulateMedia({colorScheme:'dark'});await page.locator('.chat-delete-dialog').screenshot({path:'test-results/chat-delete-dark.png'});
+ assert(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth));
+ await page.getByRole('button',{name:'Delete chat',exact:true}).click();
+ await page.getByRole('button',{name:'Chats 1',exact:true}).waitFor();
+ checks.push('Visible row menu works on mobile; confirmation fits in light and dark');
+ await page.getByRole('button',{name:'Options for '+title(0),exact:true}).click();await page.getByRole('menuitem',{name:'Delete chat',exact:true}).click();await page.getByRole('button',{name:'Delete chat',exact:true}).click();
+ await page.getByRole('heading',{name:'New conversation',exact:true}).waitFor();
+ assert.equal((await json(await api.get(cp))).chats.length,0);
+ checks.push('Deleting the active chat clears the conversation');
+ await page.setViewportSize({width:1440,height:1000});await page.reload();await page.locator('.client-button').click();await page.locator('.client-menu button').filter({hasText:fixture.name}).click();await page.getByRole('button',{name:'Chats 0',exact:true}).click();
+ await page.getByRole('textbox',{name:'Message Folio',exact:true}).fill('Slow fixture response to delete');await page.getByRole('button',{name:'Send message',exact:true}).click();
+ await page.getByRole('button',{name:'Options for Slow fixture response to delete',exact:true}).click();await page.getByRole('menuitem',{name:'Delete chat',exact:true}).click();await page.getByRole('button',{name:'Delete chat',exact:true}).click();
+ await page.getByRole('heading',{name:'New conversation',exact:true}).waitFor();await page.waitForTimeout(4500);
+ assert.equal((await json(await api.get(cp))).chats.length,0);assert.deepEqual(errors,[]);
+ checks.push('Reload stays deleted; deleting a streaming chat does not resurrect it or produce browser errors');
+ await writeFile('test-results/chat-delete-browser-checks.json',JSON.stringify({tested_at:new Date().toISOString(),environment:'isolated localhost, fixture model',checks,console_errors:errors},null,2)+'\n');
+ console.log(JSON.stringify({passed:checks.length,checks}));
+} finally {
+ if(fixture)await api.post(base+'/api/clients/'+fixture.id+'/archive',{data:{name:fixture.name}});
+ await browser.close();
+}

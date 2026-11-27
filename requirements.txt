@@ -1,0 +1,15 @@
+fastapi==0.165.0
+starlette==1.6.0
+uvicorn[standard]==0.34.2
+python-multipart==0.0.31
+python-dotenv==1.2.2
+httpx==0.28.1
+pypdf==6.21.4
+python-docx==1.1.2
+openpyxl==3.1.5
+PyMuPDF==1.25.5
+Pillow==13.0.0
+pytesseract==0.3.13
+pytest==9.0.3
+boto3==1.43.62
+

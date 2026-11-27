@@ -1,0 +1,27 @@
+.app .chat-list .chat-row{display:flex;align-items:flex-start;gap:2px;border-radius:8px;margin-bottom:4px;min-width:0}
+.app .chat-list .chat-row:hover{background:var(--soft)}
+.app .chat-list .chat-row.selected{background:#f5e8ec}
+.app .chat-list .chat-entry{display:flex;align-items:flex-start;gap:9px;text-align:left;flex:1;min-width:0;width:auto;margin:0;padding:12px 5px 12px 8px;background:transparent;border-radius:8px 0 0 8px}
+.app .chat-list .chat-entry>svg{flex-shrink:0;margin-top:3px}
+.app .chat-list .chat-entry>span{flex:1;min-width:0;overflow-wrap:anywhere}
+.app .chat-list .chat-entry small{display:block}
+.app .chat-list .chat-entry.selected{background:transparent}
+.app .chat-list .chat-options{display:grid;place-items:center;flex:0 0 30px;width:30px;height:32px;min-height:32px;padding:0;margin:8px 4px 0 0;background:transparent;border:0;border-radius:7px;color:#70848d}
+.app .chat-list .chat-options:hover,.app .chat-list .chat-options[aria-expanded=true]{background:#e8dde0;color:#963d54}
+.app .chat-list .chat-options:focus-visible,.app .chat-context-menu button:focus-visible{outline:2px solid #62929e;outline-offset:2px}
+.app .chat-context-menu{position:fixed;z-index:160;min-width:198px;max-width:calc(100vw - 16px);padding:8px;border-radius:11px;border:1px solid var(--line);background:var(--surface);box-shadow:0 8px 30px #142f4026}
+.app .chat-menu-caption{display:block;padding:7px 9px 9px;font-size:9px;letter-spacing:.1em;color:#71848b}
+.app .chat-context-menu button{display:flex;align-items:center;gap:10px;width:100%;padding:11px 10px;border:0;border-radius:6px;background:transparent;color:#963d54;font-size:13px;text-align:left}
+.app .chat-context-menu button:hover,.app .chat-context-menu button:focus{background:#f4e7ec}
+.app .chat-delete-title{display:flex;align-items:flex-start;gap:12px;padding:18px 0;border-block:1px solid var(--line);color:var(--ink)}
+.app .chat-delete-title svg{flex-shrink:0;margin-top:2px;color:#62929e}
+.app .chat-delete-title strong{font-size:14px;font-weight:550;line-height:1.65;overflow-wrap:anywhere}
+.app .chat-delete-dialog button:disabled{opacity:.5;cursor:wait}
+[data-theme=dark] .app .chat-list .chat-row.selected{background:#4a3542}
+[data-theme=dark] .app .chat-list .chat-entry.selected{background:transparent}
+[data-theme=dark] .app .chat-list .chat-options{color:#a9bbc1}
+[data-theme=dark] .app .chat-list .chat-options:hover,[data-theme=dark] .app .chat-list .chat-options[aria-expanded=true]{background:#482d39;color:#efa6bb}
+[data-theme=dark] .app .chat-context-menu button{color:#efa6bb}
+[data-theme=dark] .app .chat-context-menu button:hover,[data-theme=dark] .app .chat-context-menu button:focus{background:#482d39}
+[data-theme=dark] .app .chat-menu-caption{color:#a9bbc1}
+@media(pointer:coarse){.app .chat-list .chat-options{flex-basis:36px;width:36px;height:44px}}

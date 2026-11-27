@@ -1,0 +1,38 @@
+.app .document-toolbar{height:auto;min-height:48px;flex-wrap:wrap;column-gap:10px;row-gap:0}
+.app .document-tabs{min-height:44px}
+.app .document-tools{min-height:40px;margin-left:auto;flex-shrink:0;align-items:center}
+.app .document-tools .delete-file{color:#9a3e56}
+.app .document-tools .delete-file:hover{background:#f5e8ed}
+.app .trash-emblem{display:grid;place-items:center;background:#f4e7ec;color:#963c54;width:48px;height:48px;border-radius:14px;margin:22px 0 18px}
+.app .trash-file-summary,.app .trash-item{display:flex;align-items:center;gap:13px;padding:17px 0;border-top:1px solid var(--line);border-bottom:1px solid var(--line);color:var(--ink)}
+.app .trash-file-summary>svg,.app .trash-item>svg{color:#62929e;flex-shrink:0}
+.app .trash-file-summary>div,.app .trash-item>div{min-width:0;flex:1}
+.app .trash-file-summary strong,.app .trash-item strong{display:block;font-size:13px;font-weight:550;overflow-wrap:anywhere;line-height:1.6}
+.app .trash-file-summary small,.app .trash-item small{display:block;font-size:11px;color:#71848b;margin-top:3px}
+.app .trash-note{color:#71848b;font-size:11px;line-height:1.7;margin:17px 0 0}
+.app .trash-actions{display:flex;justify-content:flex-end;gap:10px;margin-top:27px}
+.app .trash-empty-footer{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-top:25px;padding-top:19px;border-top:1px solid var(--line)}
+.app .trash-empty-footer>span{font-size:12px;color:#71848b}
+.app .trash-purge-files{max-height:28vh;overflow:auto;border-block:1px solid var(--line);padding:7px 0}
+.app .trash-purge-files>div{display:flex;gap:11px;align-items:flex-start;padding:9px 0;font-size:13px;color:var(--ink)}
+.app .trash-purge-files svg{color:#62929e;flex-shrink:0;margin-top:2px}
+.app .trash-purge-files span{overflow-wrap:anywhere;min-width:0}
+.app .trash-purge-files small{display:block;margin-top:3px;color:#71848b;font-size:11px}
+.app .trash-cleanup{background:var(--soft);border:1px solid var(--line);padding:15px;border-radius:10px;margin-top:18px;font-size:12px;line-height:1.7;color:var(--ink)}
+.app .trash-cleanup p{margin:0 0 12px}
+.app .trash-empty-footer .danger-button:disabled{cursor:default;opacity:.45}
+.app .danger-button{display:inline-flex;align-items:center;justify-content:center;gap:8px;background:#a6445d;color:#fff;border:1px solid #a6445d;border-radius:8px;padding:11px 15px;font-size:12px;font-weight:550}
+.app .danger-button:hover{background:#8b354c}
+.app .file-trash-dialog button:disabled{opacity:.55;cursor:wait}
+.app .file-trash-dialog button:focus-visible{outline:2px solid #62929e;outline-offset:4px}
+.app .trash-list{max-height:40vh;overflow:auto}
+.app .trash-item+.trash-item{border-top:0}
+.app .trash-item .secondary{font-size:11px;padding:8px 10px;flex-shrink:0}
+.app .trash-empty{display:flex;flex-direction:column;align-items:center;text-align:center;padding:30px 16px 35px;gap:13px;border:1px dashed var(--line);border-radius:12px;color:#62929e}
+.app .trash-empty strong{font-size:14px;color:var(--ink)}
+.app .trash-empty p{font-size:12px;line-height:1.7;color:#71848b;margin:0}
+[data-theme=dark] .app .trash-emblem{background:#482d39;color:#efa6bb}
+[data-theme=dark] .app .document-tools .delete-file{color:#efa6bb}
+[data-theme=dark] .app .document-tools .delete-file:hover{background:#482d39}
+[data-theme=dark] .app :is(.trash-note,.trash-item small,.trash-file-summary small,.trash-empty p,.trash-purge-files small,.trash-empty-footer>span){color:#a9bbc1}
+@media(max-width:600px){.app .document-tools .delete-file span{display:none}.app .trash-actions>*{flex:1}.app .trash-item{gap:9px}.app .trash-item .secondary{padding:9px 7px}.app .trash-file-summary{padding:13px 0}}
