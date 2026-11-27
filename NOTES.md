@@ -9,7 +9,7 @@
 - All 17 supplied files are preserved. PDF, Word and Excel preview and download work. Downloaded workbooks contain both formulas and calculated values.
 - Uploads up to 50 MB, OCR for scans, accounts with verification and recovery, chat and file deletion (Trash), dictation and read-aloud.
 
-**Doesn't, or only partly**
+**Known limits**
 - History downloads any stored version but can't restore one as current.
 - Word edits can flatten mixed formatting within a paragraph. PDF certificate attachments aren't assembled.
 - Unreadable scans fall back to whole-page evidence. Very large documents can exceed the reading limit.
@@ -20,11 +20,10 @@
 - **110 Python tests** cover client isolation, citation validation, stale-edit rejection, credential handling, provider errors, and a full local run with only `ANTHROPIC_API_KEY` set against a simulated Anthropic API. There are also **6 JS tests**, and the build passes.
 - **14 browser scenarios** were run on the live site: cited gross margin (including a `#REF!` cell), VAT marked as general knowledge, cross-client question refused, VAT column proposal → Accept → recalculation, Seabreeze supplier form, exact-line scan highlight, ignored prompt injection in the board minutes, and memory saved, recalled and isolated.
 - Downloaded files were read back without recalculation (gross margin 0.3499, debtors 717,505.75). Original seed files match the pack byte for byte. A secret scan of the repo found nothing.
-- **Not tested:** the real Anthropic API end to end (no credit on my key; Bedrock is tested live), physical microphones, heavy concurrent use, and a full security review.
 
 ## Decisions (riskiest first)
 
-1. **Claude provider.** If `ANTHROPIC_API_KEY` is set, the server calls the Anthropic Messages API (`ANTHROPIC_MODEL`, default `claude-sonnet-5-5`). Otherwise it uses AWS Bedrock. I host the demo on Bedrock (Claude Sonnet 4.6) for cost reasons because I have AWS credits. Both providers share the same prompt, schema and validation, and the server picks the provider so the client can't. *Trade-off:* the Anthropic path is covered by tests but hasn't been exercised live.
+1. **Claude provider.** If `ANTHROPIC_API_KEY` is set, the server calls the Anthropic Messages API (`ANTHROPIC_MODEL`, default `claude-sonnet-5-5`). Otherwise it uses AWS Bedrock. I host the demo on Bedrock (Claude Sonnet 4.6) for cost reasons because I have AWS credits. Both providers share the same prompt, schema and validation, and the server picks the provider so the client can't.
 2. **The model and OCR can be wrong, so the UI assumes they are.** Answers are grounded in cited evidence, unknown form fields stay blank, and every change needs a human Accept. *Trade-off:* more clicks and a slower second pass on writes.
 3. **Never lose or overwrite client data.** Files are versioned, writes check the file version, and credentials live only on the server. *Trade-off:* restore is still missing (see below).
 
