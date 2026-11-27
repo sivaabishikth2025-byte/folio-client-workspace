@@ -27,7 +27,7 @@
   - memory saved, recalled and isolated per client.
 - **Data integrity:** exported values were read back without recalculation (gross margin 0.3499, debtors 717,505.75). Seed files match the pack byte for byte. A secret scan of the repo came back clean.
 
-## Key decisions (riskiest first)
+## Key decisions
 
 1. **Model provider.** The Anthropic Messages API is used when `ANTHROPIC_API_KEY` is set (`ANTHROPIC_MODEL`, default `claude-sonnet-5-5`). Otherwise the app uses AWS Bedrock. The hosted demo runs on Bedrock for cost reasons. Both paths share one prompt, one schema and one validation layer. The provider is chosen on the server, never by the client.
 2. **Treat model and OCR output as untrusted.** Answers must cite evidence, unknown form fields stay blank, and every change needs explicit approval. This trades a little speed and an extra click for correctness on financial data.
